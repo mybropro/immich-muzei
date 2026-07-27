@@ -12,6 +12,7 @@ import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.POST
 import retrofit2.http.PUT
+import retrofit2.http.Query
 
 private const val HEADER_API_KEY = "x-api-key"
 
@@ -24,6 +25,13 @@ interface ImmichApi {
 
     @GET("tags")
     suspend fun getTags(): List<ImmichTag>
+
+    @GET("people")
+    suspend fun getPeople(
+        @Query("page") page: Int,
+        @Query("size") size: Int,
+        @Query("withHidden") withHidden: Boolean,
+    ): ImmichPeopleResponse
 
     @POST("search/random")
     suspend fun getRandomAssets(@Body request: SearchRandomRequest): List<ImmichAsset>
@@ -51,6 +59,10 @@ class ImmichClient private constructor(
 
     fun buildAssetViewUrl(assetId: String): String {
         return "${baseUrl}photos/$assetId"
+    }
+
+    fun buildPersonThumbnailUrl(personId: String): String {
+        return "${baseUrl}people/$personId/thumbnail?apiKey=$apiKey"
     }
 
     companion object {
@@ -87,6 +99,7 @@ class ImmichClient private constructor(
 data class SearchRandomRequest(
     val albumIds: List<String>? = null,
     val tagIds: List<String>? = null,
+    val personIds: List<String>? = null,
     val size: Int = 10,
     val isFavorite: Boolean? = null,
     // Filter assets created after this timestamp (ISO-8601 string expected by the API)
@@ -118,6 +131,24 @@ data class ImmichTag(
     val id: String,
     val name: String,
     val value: String
+)
+
+@Serializable
+data class ImmichPeopleResponse(
+    val people: List<ImmichPerson> = emptyList(),
+    val total: Int = 0,
+    val hidden: Int = 0,
+    val hasNextPage: Boolean = false
+)
+
+@Serializable
+data class ImmichPerson(
+    val id: String,
+    // Unnamed faces come back with an empty name
+    val name: String = "",
+    val isHidden: Boolean = false,
+    val birthDate: String? = null,
+    var thumbnailUrl: String? = null
 )
 
 @Serializable

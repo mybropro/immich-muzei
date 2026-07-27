@@ -17,10 +17,19 @@ You can download the latest release from the [the releases page](https://github.
 
 - Connect to your Immich server using server URL and API key
 - Browse and select albums to display
+- Browse and select people (named faces) to display, with a checkbox list and face thumbnails
 - Browse and select tags to filter photos
 - Filter photos by date range
 - Show only favorited photos (optional)
-- Automatically rotates through random photos from selected albums/tags
+- Automatically rotates through random photos from selected albums/people/tags
+
+### How albums and people combine
+
+Albums and people form a single pool of sources. Each wallpaper refresh draws photos from
+one entry in that pool, cycling through them in turn — so selecting two albums and three
+people gives you photos from *any* of those five sources, not only photos that satisfy all
+of them at once. Tags, "favorites only" and the date filter are applied on top of whichever
+source is drawn. Selecting nothing means the whole library.
 - "Open in Immich" action to view the current photo in your Immich instance
 - "Add to favorites" action within Muzei UI and using an app shortcut.
 

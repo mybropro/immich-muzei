@@ -49,7 +49,8 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
                     if (!config.isConfigured) {
                         _state.value = _state.value.copy(
                             albums = emptyList(),
-                            tags = emptyList()
+                            tags = emptyList(),
+                            people = emptyList()
                         )
                     }
                 }
@@ -60,10 +61,15 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     private fun loadCachedData() {
         val cachedAlbums = prefs.getCachedAlbums()
         val cachedTags = prefs.getCachedTags()
-        Log.d(TAG, "Loaded ${cachedAlbums.size} cached albums and ${cachedTags.size} cached tags")
+        val cachedPeople = prefs.getCachedPeople()
+        Log.d(
+            TAG,
+            "Loaded ${cachedAlbums.size} cached albums, ${cachedTags.size} cached tags and ${cachedPeople.size} cached people"
+        )
         _state.value = _state.value.copy(
             albums = cachedAlbums,
-            tags = cachedTags
+            tags = cachedTags,
+            people = cachedPeople
         )
     }
 

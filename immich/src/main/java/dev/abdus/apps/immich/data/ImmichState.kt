@@ -4,6 +4,7 @@ data class ImmichUiState(
     val config: ImmichConfig = ImmichConfig(null, null, emptySet(), emptySet(), false),
     val albums: List<ImmichAlbumUiModel> = emptyList(),
     val tags: List<ImmichTagUiModel> = emptyList(),
+    val people: List<ImmichPersonUiModel> = emptyList(),
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
     val sortBy: AlbumSortBy = AlbumSortBy.ASSET_COUNT,

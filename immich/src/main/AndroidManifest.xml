@@ -35,6 +35,12 @@
             android:parentActivityName="dev.abdus.apps.immich.ui.SettingsActivity" />
 
         <activity
+            android:name="dev.abdus.apps.immich.ui.PeoplePickerActivity"
+            android:exported="false"
+            android:theme="@android:style/Theme.Material.NoActionBar"
+            android:parentActivityName="dev.abdus.apps.immich.ui.SettingsActivity" />
+
+        <activity
             android:name="dev.abdus.apps.immich.ui.ConfigActivity"
             android:exported="true"
             android:theme="@android:style/Theme.Material.NoActionBar"

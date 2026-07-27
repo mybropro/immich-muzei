@@ -16,11 +16,13 @@ private const val KEY_API_KEY = "api_key"
 private const val KEY_SELECTED_ALBUM = "selected_album"  // Deprecated, kept for migration
 private const val KEY_SELECTED_ALBUMS = "selected_albums"  // New: multiple albums
 private const val KEY_SELECTED_TAGS = "selected_tags"
+private const val KEY_SELECTED_PEOPLE = "selected_people"
 private const val KEY_FAVORITES_ONLY = "favorites_only"
 private const val KEY_FILTER_DAYS_BACK = "filter_days_back"  // New: store days-back directly
 private const val KEY_LAST_ALBUM_INDEX = "last_album_index"  // Round-robin tracking
 private const val KEY_CACHED_ALBUMS = "cached_albums_json"  // Cached album metadata
 private const val KEY_CACHED_TAGS = "cached_tags_json"  // Cached tag metadata
+private const val KEY_CACHED_PEOPLE = "cached_people_json"  // Cached person metadata
 
 class AppPreferences(context: Context) {
     private val prefs: SharedPreferences =
@@ -51,6 +53,14 @@ class AppPreferences(context: Context) {
         prefs.edit { putStringSet(KEY_SELECTED_TAGS, ids) }
     }
 
+    fun updateSelectedPeople(ids: Set<String>) {
+        prefs.edit {
+            putStringSet(KEY_SELECTED_PEOPLE, ids)
+            // People join albums in the round-robin pool, so the index is no longer meaningful
+            putInt(KEY_LAST_ALBUM_INDEX, 0)
+        }
+    }
+
     fun updateFavoritesOnly(enabled: Boolean) {
         prefs.edit { putBoolean(KEY_FAVORITES_ONLY, enabled) }
     }
@@ -62,14 +72,15 @@ class AppPreferences(context: Context) {
     }
 
     /**
-     * Get the next album index for round-robin selection.
+     * Get the next index for round-robin selection over the source pool
+     * (selected albums followed by selected people).
      * Returns the current index and increments it for next time.
      */
-    fun getNextAlbumIndex(totalAlbums: Int): Int {
-        if (totalAlbums <= 0) return 0
+    fun getNextSourceIndex(totalSources: Int): Int {
+        if (totalSources <= 0) return 0
 
-        val current = prefs.getInt(KEY_LAST_ALBUM_INDEX, 0)
-        val next = (current + 1) % totalAlbums
+        val current = prefs.getInt(KEY_LAST_ALBUM_INDEX, 0).coerceIn(0, totalSources - 1)
+        val next = (current + 1) % totalSources
         prefs.edit { putInt(KEY_LAST_ALBUM_INDEX, next) }
         return current
     }
@@ -114,6 +125,26 @@ class AppPreferences(context: Context) {
         }
     }
 
+    /**
+     * Save person metadata for local caching
+     */
+    fun saveCachedPeople(people: List<ImmichPersonUiModel>) {
+        val json = Json.encodeToString(people)
+        prefs.edit { putString(KEY_CACHED_PEOPLE, json) }
+    }
+
+    /**
+     * Load cached person metadata
+     */
+    fun getCachedPeople(): List<ImmichPersonUiModel> {
+        val json = prefs.getString(KEY_CACHED_PEOPLE, null) ?: return emptyList()
+        return try {
+            Json.decodeFromString(json)
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+
     private fun readConfig(): ImmichConfig {
         // Migration: if old single album key exists, migrate to new format
         val oldAlbumId = prefs.getString(KEY_SELECTED_ALBUM, null)
@@ -139,7 +170,8 @@ class AppPreferences(context: Context) {
              selectedAlbumIds = selectedAlbums,
              selectedTagIds = prefs.getStringSet(KEY_SELECTED_TAGS, emptySet()) ?: emptySet(),
              favoritesOnly = prefs.getBoolean(KEY_FAVORITES_ONLY, false),
-             filterPresetDaysBack = prefs.getInt(KEY_FILTER_DAYS_BACK, -1).let { if (it == -1) null else it }
+             filterPresetDaysBack = prefs.getInt(KEY_FILTER_DAYS_BACK, -1).let { if (it == -1) null else it },
+             selectedPersonIds = prefs.getStringSet(KEY_SELECTED_PEOPLE, emptySet()) ?: emptySet()
          )
      }
 
@@ -153,7 +185,9 @@ data class ImmichConfig(
     val selectedTagIds: Set<String> = emptySet(),
     val favoritesOnly: Boolean = false,
     // persisted days-back value for the Taken-at slider (e.g. 7 = last week)
-    val filterPresetDaysBack: Int? = null
+    val filterPresetDaysBack: Int? = null,
+    // Declared last so the existing positional constructor calls keep compiling
+    val selectedPersonIds: Set<String> = emptySet()
 ) {
     val isConfigured: Boolean get() = !serverUrl.isNullOrBlank() && !apiKey.isNullOrBlank()
     val apiBaseUrl: String?

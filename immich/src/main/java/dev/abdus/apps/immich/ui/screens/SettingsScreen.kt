@@ -18,11 +18,13 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.PhotoLibrary
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -46,6 +48,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -55,11 +58,13 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.ImageLoader
 import coil3.compose.AsyncImage
 import dev.abdus.apps.immich.data.ImmichAlbumUiModel
+import dev.abdus.apps.immich.data.ImmichPersonUiModel
 import dev.abdus.apps.immich.data.ImmichTagUiModel
 import dev.abdus.apps.immich.data.ImmichUiState
 import dev.abdus.apps.immich.ui.AlbumPickerActivity
 import dev.abdus.apps.immich.ui.ConfigActivity
 import dev.abdus.apps.immich.ui.ImmichImageLoaderProvider
+import dev.abdus.apps.immich.ui.PeoplePickerActivity
 import dev.abdus.apps.immich.ui.SettingsViewModel
 import dev.abdus.apps.immich.ui.TagPickerActivity
 
@@ -102,6 +107,9 @@ fun SettingsScreen(
         onChangeTags = {
             context.startActivity(Intent(context, TagPickerActivity::class.java))
         },
+        onChangePeople = {
+            context.startActivity(Intent(context, PeoplePickerActivity::class.java))
+        },
         onEditConfig = {
             context.startActivity(Intent(context, ConfigActivity::class.java))
         },
@@ -121,6 +129,7 @@ private fun ImmichContent(
     imageLoader: ImageLoader,
     onChangeAlbum: () -> Unit,
     onChangeTags: () -> Unit,
+    onChangePeople: () -> Unit,
     onEditConfig: () -> Unit,
     onClearPhotos: () -> Unit,
     onToggleFavoritesOnly: () -> Unit,
@@ -178,6 +187,7 @@ private fun ImmichContent(
                         imageLoader = imageLoader,
                         onChangeAlbum = onChangeAlbum,
                         onChangeTags = onChangeTags,
+                        onChangePeople = onChangePeople,
                         onToggleFavoritesOnly = onToggleFavoritesOnly,
                         paddingValues = paddingValues,
                         onCreatedAfterChanged = onCreatedAfterChanged,
@@ -233,6 +243,7 @@ private fun SelectedItemsView(
     imageLoader: ImageLoader,
     onChangeAlbum: () -> Unit,
     onChangeTags: () -> Unit,
+    onChangePeople: () -> Unit,
     onToggleFavoritesOnly: () -> Unit,
     paddingValues: PaddingValues,
     isImmichActive: Boolean,
@@ -244,6 +255,7 @@ private fun SelectedItemsView(
 
     val selectedAlbums = state.albums.filter { album -> album.id in state.config.selectedAlbumIds }
     val selectedTags = state.tags.filter { tag -> state.config.selectedTagIds.contains(tag.id) }
+    val selectedPeople = state.people.filter { person -> person.id in state.config.selectedPersonIds }
     val context = androidx.compose.ui.platform.LocalContext.current
 
     LazyColumn(
@@ -267,6 +279,10 @@ private fun SelectedItemsView(
 
         item {
             SelectedAlbums(selectedAlbums, onChangeAlbum, imageLoader)
+        }
+
+        item {
+            SelectedPeople(selectedPeople, onChangePeople, imageLoader)
         }
 
         item {
@@ -567,6 +583,97 @@ private fun SelectedAlbums(selectedAlbums: List<ImmichAlbumUiModel>, onChangeAlb
 
                     Button(onClick = onChangeAlbum, modifier = Modifier.fillMaxWidth()) {
                         Text("Change Albums")
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SelectedPeople(
+    selectedPeople: List<ImmichPersonUiModel>,
+    onChangePeople: () -> Unit,
+    imageLoader: ImageLoader
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(
+            text = "People",
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.primary,
+        )
+
+        if (selectedPeople.isEmpty()) {
+            Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp)) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Text(text = "No people selected", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(text = "Photos will not be filtered by who is in them", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Button(onClick = onChangePeople) { Text("Add People") }
+                }
+            }
+        } else {
+            Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp)) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Text(
+                        text = when (selectedPeople.size) {
+                            1 -> "1 person selected"
+                            else -> "${selectedPeople.size} people selected"
+                        },
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+
+                    val previewNames = selectedPeople.take(3).joinToString(", ") { it.name }
+                    Text(
+                        text = if (selectedPeople.size <= 3) previewNames else "$previewNames, +${selectedPeople.size - 3} more",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    LazyRow(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        contentPadding = PaddingValues(horizontal = 4.dp)
+                    ) {
+                        items(selectedPeople, key = { it.id }) { person ->
+                            Box(
+                                modifier = Modifier
+                                    .size(64.dp)
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.surfaceVariant),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (person.thumbnailUrl != null) {
+                                    AsyncImage(
+                                        model = person.thumbnailUrl,
+                                        imageLoader = imageLoader,
+                                        contentDescription = person.name,
+                                        contentScale = ContentScale.Crop,
+                                        modifier = Modifier.fillMaxSize()
+                                    )
+                                } else {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Person,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    Button(onClick = onChangePeople, modifier = Modifier.fillMaxWidth()) {
+                        Text("Change People")
                     }
                 }
             }
