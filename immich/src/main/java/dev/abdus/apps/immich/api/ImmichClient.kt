@@ -100,6 +100,7 @@ class ImmichClient private constructor(
 
 @Serializable
 data class SearchAssetsRequest(
+    val type: String = "IMAGE",
     val albumIds: List<String>? = null,
     val tagIds: List<String>? = null,
     val personIds: List<String>? = null,
@@ -174,6 +175,7 @@ data class ImmichPerson(
 @Serializable
 data class ImmichAsset(
     val id: String,
+    val type: String? = null,
     val albumId: String? = null,
     val originalFileName: String? = null,
     val originalMimeType: String? = null,

@@ -23,6 +23,7 @@ You can download the latest release from the [the releases page](https://github.
 - Show only favorited photos (optional)
 - Exclude the 100 closest semantic matches to a free-text phrase (for example, "bath or tub")
 - Automatically rotates through random photos from selected albums/people/tags
+- Only image assets are fetched for wallpapers; video and audio assets are excluded
 
 ### How albums and people combine
 

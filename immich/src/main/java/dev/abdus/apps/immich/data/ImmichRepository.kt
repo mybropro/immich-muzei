@@ -76,7 +76,8 @@ class ImmichRepository(private val client: ImmichClient) {
             client.searchSmart(request.copy(size = 100, query = query, page = 1))
                 .assets.items.take(100).map { it.id }.toSet()
         }
-        val result = client.getRandomAssets(request).filterNot { it.id in excludedIds }
+        // Keep video/audio assets out even if a server returns them despite the type filter.
+        val result = client.getRandomAssets(request).filter { it.type == "IMAGE" && it.id !in excludedIds }
         result.map {
             it.downloadUrl = client.buildAssetDownloadUrl(it.id)
             it.previewUrl = client.buildAssetPreviewUrl(it.id)

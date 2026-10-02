@@ -31,7 +31,7 @@ class ImmichRepositoryTest {
         server.enqueue(MockResponse().setResponseCode(code).setHeader("Content-Type", "application/json").setBody(body))
     }
 
-    private fun randomAsset(id: String) = """{"id":"$id","originalPath":"/photos/$id.jpg"}"""
+    private fun randomAsset(id: String) = """{"id":"$id","type":"IMAGE","originalPath":"/photos/$id.jpg"}"""
 
     @Test
     fun `smart search uses identical filters and removes matching IDs`() = runBlocking {
@@ -56,6 +56,8 @@ class ImmichRepositoryTest {
         assertEquals(Json.parseToJsonElement("1"), smartBody["page"])
         assertEquals(Json.parseToJsonElement("\"bath or tub\""), smartBody["query"])
         assertEquals(Json.parseToJsonElement("6"), randomBody["size"])
+        assertEquals(Json.parseToJsonElement("\"IMAGE\""), randomBody["type"])
+        assertEquals(randomBody["type"], smartBody["type"])
         assertFalse(randomBody.containsKey("query"))
         assertFalse(randomBody.containsKey("page"))
         assertEquals(randomBody.filterKeys { it != "size" }, smartBody.filterKeys { it !in setOf("size", "query", "page") })
@@ -69,7 +71,9 @@ class ImmichRepositoryTest {
         assertEquals(listOf("kept"), result.map { it.id })
         val request = server.takeRequest(2, TimeUnit.SECONDS)!!
         assertEquals("/api/search/random", request.path)
-        assertEquals(setOf("size"), Json.parseToJsonElement(request.body.readUtf8()).jsonObject.keys)
+        val body = Json.parseToJsonElement(request.body.readUtf8()).jsonObject
+        assertEquals(setOf("size", "type"), body.keys)
+        assertEquals(Json.parseToJsonElement("\"IMAGE\""), body["type"])
         assertEquals(1, server.requestCount)
     }
 
@@ -78,6 +82,15 @@ class ImmichRepositoryTest {
         respond("""{"assets":{"items":[],"nextPage":null}}""")
         respond("[${randomAsset("kept")}]")
         assertEquals(listOf("kept"), repository.fetchRandomAssets(null, null, exclusionQuery = "tub").map { it.id })
+    }
+
+    @Test
+    fun `non-image assets cannot become wallpaper even if server ignores type filter`() = runBlocking {
+        respond("""[${randomAsset("photo")},
+            {"id":"movie","type":"VIDEO","originalPath":"/photos/movie.mp4","originalMimeType":"video/mp4"},
+            {"id":"audio","type":"AUDIO","originalPath":"/photos/audio.mp3"},
+            {"id":"unknown","originalPath":"/photos/unknown"}]""")
+        assertEquals(listOf("photo"), repository.fetchRandomAssets(null, null).map { it.id })
     }
 
     @Test
