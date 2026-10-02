@@ -34,6 +34,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SuggestionChip
@@ -46,6 +47,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -115,6 +117,7 @@ fun SettingsScreen(
         },
         onClearPhotos = viewModel::clearPhotos,
         onToggleFavoritesOnly = viewModel::toggleFavoritesOnly,
+        onExclusionQueryChanged = viewModel::updateExclusionQuery,
         onCreatedAfterChanged = { daysBack: Int? ->
             viewModel.updateFilterDaysBack(daysBack)
         },
@@ -133,6 +136,7 @@ private fun ImmichContent(
     onEditConfig: () -> Unit,
     onClearPhotos: () -> Unit,
     onToggleFavoritesOnly: () -> Unit,
+    onExclusionQueryChanged: (String) -> Unit,
     onCreatedAfterChanged: (Int?) -> Unit,
     isImmichActive: Boolean,
     onLaunchChooseProvider: (Context) -> Unit
@@ -189,6 +193,7 @@ private fun ImmichContent(
                         onChangeTags = onChangeTags,
                         onChangePeople = onChangePeople,
                         onToggleFavoritesOnly = onToggleFavoritesOnly,
+                        onExclusionQueryChanged = onExclusionQueryChanged,
                         paddingValues = paddingValues,
                         onCreatedAfterChanged = onCreatedAfterChanged,
                         isImmichActive = isImmichActive,
@@ -245,6 +250,7 @@ private fun SelectedItemsView(
     onChangeTags: () -> Unit,
     onChangePeople: () -> Unit,
     onToggleFavoritesOnly: () -> Unit,
+    onExclusionQueryChanged: (String) -> Unit,
     paddingValues: PaddingValues,
     isImmichActive: Boolean,
     onCreatedAfterChanged: (Int?) -> Unit,
@@ -298,6 +304,42 @@ private fun SelectedItemsView(
                 createdAfterDaysBack = createdAfterDaysBack,
                 onCreatedAfterChanged = onCreatedAfterChanged
             )
+        }
+
+        item {
+            SemanticExclusions(state.config.exclusionQuery, onExclusionQueryChanged)
+        }
+    }
+}
+
+@Composable
+private fun SemanticExclusions(query: String, onApply: (String) -> Unit) {
+    var draft by rememberSaveable(query) { mutableStateOf(query) }
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text("Exclude photos matching", style = MaterialTheme.typography.titleMedium)
+            OutlinedTextField(
+                value = draft,
+                onValueChange = { draft = it },
+                label = { Text("Describe photos to avoid") },
+                placeholder = { Text("bath or tub") },
+                modifier = Modifier.fillMaxWidth(),
+                minLines = 1,
+                maxLines = 3
+            )
+            Text(
+                "Excludes the 100 closest Smart Search matches within the current album or person, " +
+                    "using your date, tag and favorites filters. Requires Immich Smart Search. " +
+                    "A small selection may have no photos left. Clear the text to turn this off.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Button(onClick = { onApply(draft) }, enabled = draft.trim() != query) {
+                Text("Apply")
+            }
         }
     }
 }

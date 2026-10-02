@@ -156,6 +156,12 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         markPendingChanges()
     }
 
+    fun updateExclusionQuery(query: String) {
+        if (query.trim() == prefs.current().exclusionQuery) return
+        prefs.updateExclusionQuery(query)
+        markPendingChanges()
+    }
+
     /**
      * Apply pending changes if any (clears cached photos once).
      * This should be invoked when the user is leaving the settings UI (e.g., Activity.onPause/onStop).

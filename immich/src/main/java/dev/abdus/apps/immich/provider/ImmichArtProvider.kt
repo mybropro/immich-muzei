@@ -22,8 +22,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import java.io.IOException
-import java.time.LocalDate
-import java.time.format.DateTimeFormatter
 
 class ImmichArtProvider : MuzeiArtProvider() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -60,15 +58,7 @@ class ImmichArtProvider : MuzeiArtProvider() {
         val personIds = source.personIds
 
         val tagIds = config.selectedTagIds.toList().ifEmpty { null }
-        // Include advanced filters for taken-at if configured
-        // Map stored days-back preference to an ISO date string (if present). Prefer days-back when available.
-        val createdAfterIso: String? = config.filterPresetDaysBack?.let { days ->
-            try {
-                LocalDate.now().minusDays(days.toLong()).format(DateTimeFormatter.ISO_LOCAL_DATE)
-            } catch (_: Exception) {
-                null
-            }
-        }
+        val takenAfterIso = config.takenAfterIso()
 
         scope.launch {
             try {
@@ -77,11 +67,13 @@ class ImmichArtProvider : MuzeiArtProvider() {
                     tagIds = tagIds,
                     personIds = personIds,
                     favoritesOnly = config.favoritesOnly,
-                    createdAfter = createdAfterIso,
-                    createdBefore = null
+                    takenAfter = takenAfterIso,
+                    takenBefore = null,
+                    exclusionQuery = config.exclusionQuery
                 )
 
                 if (assets.isEmpty()) {
+                    Log.d(TAG, "No assets matched $source (takenAfter=$takenAfterIso)")
                     return@launch
                 }
 

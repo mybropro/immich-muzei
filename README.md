@@ -21,6 +21,7 @@ You can download the latest release from the [the releases page](https://github.
 - Browse and select tags to filter photos
 - Filter photos by date range
 - Show only favorited photos (optional)
+- Exclude the 100 closest semantic matches to a free-text phrase (for example, "bath or tub")
 - Automatically rotates through random photos from selected albums/people/tags
 
 ### How albums and people combine
@@ -30,6 +31,25 @@ one entry in that pool, cycling through them in turn — so selecting two albums
 people gives you photos from *any* of those five sources, not only photos that satisfy all
 of them at once. Tags, "favorites only" and the date filter are applied on top of whichever
 source is drawn. Selecting nothing means the whole library.
+
+### Semantic exclusions
+
+In **Exclude photos matching**, enter a phrase and tap **Apply**. On each refresh,
+the plugin searches Immich Smart Search with that phrase and the exact same album or
+person, tags, favorites and taken-date filters as the random wallpaper request.
+It excludes the first 100 returned IDs, then fetches random photos without the text
+query and keeps only photos outside that set. Both the Muzei source and the
+Immich Random folder provider use this filter.
+
+Smart Search must be enabled on the server and accessible to your API key. The 100
+results are ranked matches, not guaranteed classifications: unrelated photos can
+be excluded and matching photos beyond the first 100 can remain. If the source has
+100 or fewer searchable photos, it may be entirely excluded. Filtering can return
+fewer photos or none; the plugin does not refill the batch with excluded photos.
+If Smart Search fails, no new photos are supplied. Clearing the text and tapping
+**Apply** disables exclusions. Applied filter changes clear queued Muzei photos when
+you leave settings; Muzei may keep displaying its current wallpaper until replaced.
+
 - "Open in Immich" action to view the current photo in your Immich instance
 - "Add to favorites" action within Muzei UI and using an app shortcut.
 

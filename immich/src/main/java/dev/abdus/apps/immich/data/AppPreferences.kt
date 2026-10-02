@@ -19,6 +19,7 @@ private const val KEY_SELECTED_TAGS = "selected_tags"
 private const val KEY_SELECTED_PEOPLE = "selected_people"
 private const val KEY_FAVORITES_ONLY = "favorites_only"
 private const val KEY_FILTER_DAYS_BACK = "filter_days_back"  // New: store days-back directly
+private const val KEY_EXCLUSION_QUERY = "exclusion_query"
 private const val KEY_LAST_ALBUM_INDEX = "last_album_index"  // Round-robin tracking
 private const val KEY_CACHED_ALBUMS = "cached_albums_json"  // Cached album metadata
 private const val KEY_CACHED_TAGS = "cached_tags_json"  // Cached tag metadata
@@ -69,6 +70,10 @@ class AppPreferences(context: Context) {
         prefs.edit {
             if (days == null) remove(KEY_FILTER_DAYS_BACK) else putInt(KEY_FILTER_DAYS_BACK, days)
         }
+    }
+
+    fun updateExclusionQuery(query: String) {
+        prefs.edit { putString(KEY_EXCLUSION_QUERY, query.trim()) }
     }
 
     /**
@@ -171,7 +176,8 @@ class AppPreferences(context: Context) {
              selectedTagIds = prefs.getStringSet(KEY_SELECTED_TAGS, emptySet()) ?: emptySet(),
              favoritesOnly = prefs.getBoolean(KEY_FAVORITES_ONLY, false),
              filterPresetDaysBack = prefs.getInt(KEY_FILTER_DAYS_BACK, -1).let { if (it == -1) null else it },
-             selectedPersonIds = prefs.getStringSet(KEY_SELECTED_PEOPLE, emptySet()) ?: emptySet()
+             selectedPersonIds = prefs.getStringSet(KEY_SELECTED_PEOPLE, emptySet()) ?: emptySet(),
+             exclusionQuery = prefs.getString(KEY_EXCLUSION_QUERY, "").orEmpty()
          )
      }
 
@@ -187,7 +193,8 @@ data class ImmichConfig(
     // persisted days-back value for the Taken-at slider (e.g. 7 = last week)
     val filterPresetDaysBack: Int? = null,
     // Declared last so the existing positional constructor calls keep compiling
-    val selectedPersonIds: Set<String> = emptySet()
+    val selectedPersonIds: Set<String> = emptySet(),
+    val exclusionQuery: String = ""
 ) {
     val isConfigured: Boolean get() = !serverUrl.isNullOrBlank() && !apiKey.isNullOrBlank()
     val apiBaseUrl: String?

@@ -34,7 +34,10 @@ interface ImmichApi {
     ): ImmichPeopleResponse
 
     @POST("search/random")
-    suspend fun getRandomAssets(@Body request: SearchRandomRequest): List<ImmichAsset>
+    suspend fun getRandomAssets(@Body request: SearchAssetsRequest): List<ImmichAsset>
+
+    @POST("search/smart")
+    suspend fun searchSmart(@Body request: SearchAssetsRequest): SmartSearchResponse
 
     @PUT("assets")
     suspend fun updateAssets(@Body request: UpdateAssetsRequest)
@@ -96,17 +99,34 @@ class ImmichClient private constructor(
 }
 
 @Serializable
-data class SearchRandomRequest(
+data class SearchAssetsRequest(
     val albumIds: List<String>? = null,
     val tagIds: List<String>? = null,
     val personIds: List<String>? = null,
     val size: Int = 10,
     val isFavorite: Boolean? = null,
-    // Filter assets created after this timestamp (ISO-8601 string expected by the API)
-    val createdAfter: String? = null,
-    // Filter assets created before this timestamp (ISO-8601 string expected by the API)
-    val createdBefore: String? = null
+    // Filter by when the photo was taken, not when it was uploaded — `createdAfter`/`createdBefore`
+    // match on the upload timestamp, which excludes old photos of a person added to a recent import.
+    // ISO-8601 instant, e.g. 2026-08-02T00:00:00Z; the API rejects date-only strings.
+    val takenAfter: String? = null,
+    val takenBefore: String? = null,
+    // Shared filter DTO keeps smart-search exclusions scoped exactly like random selection.
+    // These fields are omitted from random requests.
+    val query: String? = null,
+    val page: Int? = null
 )
+
+@Serializable
+data class SmartSearchResponse(val assets: SmartSearchAssets)
+
+@Serializable
+data class SmartSearchAssets(
+    val items: List<SmartSearchAsset>,
+    val nextPage: String? = null
+)
+
+@Serializable
+data class SmartSearchAsset(val id: String)
 
 @Serializable
 data class UpdateAssetsRequest(

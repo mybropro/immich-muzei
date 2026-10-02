@@ -11,12 +11,11 @@ import android.provider.DocumentsContract.Document
 import android.provider.DocumentsContract.Root
 import android.provider.DocumentsProvider
 import android.net.Uri
+import android.util.Log
 import dev.abdus.apps.immich.api.ImmichClientProvider
 import dev.abdus.apps.immich.data.AppPreferences
 import dev.abdus.apps.immich.data.ImmichRepository
 import kotlinx.coroutines.runBlocking
-import java.time.LocalDate
-import java.time.format.DateTimeFormatter
 
 class ImmichRandomAssetProvider : DocumentsProvider() {
     companion object {
@@ -136,24 +135,25 @@ class ImmichRandomAssetProvider : DocumentsProvider() {
         val albumIds = source.albumIds
         val personIds = source.personIds
         val tagIds = config.selectedTagIds.toList().ifEmpty { null }
-        val createdAfterIso: String? = config.filterPresetDaysBack?.let { days ->
-            try {
-                LocalDate.now().minusDays(days.toLong()).format(DateTimeFormatter.ISO_LOCAL_DATE)
-            } catch (_: Exception) {
-                null
-            }
-        }
+        val takenAfterIso = config.takenAfterIso()
 
         val assets = runBlocking {
-            repository.fetchRandomAssets(
-                albumIds = albumIds,
-                tagIds = tagIds,
-                personIds = personIds,
-                favoritesOnly = config.favoritesOnly,
-                createdAfter = createdAfterIso,
-                createdBefore = null,
-                size = limit
-            )
+            try {
+                repository.fetchRandomAssets(
+                    albumIds = albumIds,
+                    tagIds = tagIds,
+                    personIds = personIds,
+                    favoritesOnly = config.favoritesOnly,
+                    takenAfter = takenAfterIso,
+                    takenBefore = null,
+                    size = limit,
+                    exclusionQuery = config.exclusionQuery
+                )
+            } catch (e: Exception) {
+                // A rejected filter would otherwise throw out of the ContentProvider query.
+                Log.e(TAG, "Failed to fetch assets for $source (takenAfter=$takenAfterIso)", e)
+                emptyList()
+            }
         }
 
         assets.forEach { asset ->

@@ -4,7 +4,7 @@ import dev.abdus.apps.immich.api.ImmichAlbum
 import dev.abdus.apps.immich.api.ImmichAsset
 import dev.abdus.apps.immich.api.ImmichClient
 import dev.abdus.apps.immich.api.ImmichPerson
-import dev.abdus.apps.immich.api.SearchRandomRequest
+import dev.abdus.apps.immich.api.SearchAssetsRequest
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -54,20 +54,29 @@ class ImmichRepository(private val client: ImmichClient) {
         tagIds: List<String>?,
         personIds: List<String>? = null,
         favoritesOnly: Boolean = false,
-        createdAfter: String? = null,
-        createdBefore: String? = null,
-        size: Int = 10
+        takenAfter: String? = null,
+        takenBefore: String? = null,
+        size: Int = 10,
+        exclusionQuery: String = ""
     ): List<ImmichAsset> = withContext(Dispatchers.IO) {
-        val request = SearchRandomRequest(
+        val request = SearchAssetsRequest(
             albumIds = albumIds,
             tagIds = tagIds,
             personIds = personIds,
             size = size,
             isFavorite = if (favoritesOnly) true else null,
-            createdAfter = createdAfter,
-            createdBefore = createdBefore
+            takenAfter = takenAfter,
+            takenBefore = takenBefore
         )
-        val result = client.getRandomAssets(request)
+        val query = exclusionQuery.trim()
+        val excludedIds = if (query.isEmpty()) {
+            emptySet()
+        } else {
+            // Fetch before random selection. A failed search must not silently disable exclusions.
+            client.searchSmart(request.copy(size = 100, query = query, page = 1))
+                .assets.items.take(100).map { it.id }.toSet()
+        }
+        val result = client.getRandomAssets(request).filterNot { it.id in excludedIds }
         result.map {
             it.downloadUrl = client.buildAssetDownloadUrl(it.id)
             it.previewUrl = client.buildAssetPreviewUrl(it.id)
